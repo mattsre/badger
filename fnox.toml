@@ -1,0 +1,8 @@
+default_provider = "onepass"
+
+[providers.onepass]
+type = "1password"
+vault = "Software Dev"
+
+[secrets]
+CIRCLECI_TOKEN= { provider = "onepass", value = "CircleCI Token" }

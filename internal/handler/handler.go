@@ -87,7 +87,7 @@ func parseCircleCIProjectPath(path string) (vcs, org, repo string, ok bool) {
 }
 
 func badgeForError(err error) (message, color string) {
-	if errors.Is(err, circleci.ErrNoPipelines) {
+	if _, ok := errors.AsType[*circleci.NoPipelinesError](err); ok {
 		return "none", badge.ColorLightGrey
 	}
 	return "error", badge.ColorRed

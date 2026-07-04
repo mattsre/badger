@@ -3,7 +3,6 @@ package circleci
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,9 +11,16 @@ import (
 	"time"
 )
 
-var ErrNoPipelines = errors.New("no pipelines found")
-
 const defaultBaseURL = "https://circleci.com/api/v2"
+
+// NoPipelinesError is returned when a branch has no CircleCI pipelines.
+type NoPipelinesError struct {
+	Branch string
+}
+
+func (e *NoPipelinesError) Error() string {
+	return fmt.Sprintf("no pipelines found for branch %q", e.Branch)
+}
 
 // Client talks to the CircleCI API v2.
 type Client struct {
@@ -73,38 +79,26 @@ func (c *Client) LatestPipeline(ctx context.Context, projectSlug, branch string)
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("circleci API returned %d: %s", resp.StatusCode, truncate(string(body), 200))
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return nil, fmt.Errorf("circleci API returned %d: %s", resp.StatusCode, string(body))
 	}
 
 	var list pipelineListResponse
-	if err := json.Unmarshal(body, &list); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&list); err != nil {
 		return nil, err
 	}
 	if len(list.Items) == 0 {
-		return nil, fmt.Errorf("%w for branch %q", ErrNoPipelines, branch)
+		return nil, &NoPipelinesError{Branch: branch}
 	}
 
 	return &list.Items[0], nil
 }
 
 func escapeSlug(slug string) string {
-	// Slug segments are separated by /; each segment is URL-encoded.
 	parts := strings.Split(slug, "/")
 	for i, p := range parts {
 		parts[i] = url.PathEscape(p)
 	}
 	return strings.Join(parts, "/")
-}
-
-func truncate(s string, max int) string {
-	if len(s) <= max {
-		return s
-	}
-	return s[:max] + "..."
 }

@@ -59,7 +59,7 @@ func TestPipelineColor(t *testing.T) {
 }
 
 func TestBadgeForError(t *testing.T) {
-	msg, color := badgeForError(circleci.ErrNoPipelines)
+	msg, color := badgeForError(&circleci.NoPipelinesError{Branch: "main"})
 	if msg != "none" || color != badge.ColorLightGrey {
 		t.Errorf("badgeForError(no pipelines) = (%q, %q), want (none, grey)", msg, color)
 	}
