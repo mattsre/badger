@@ -1,0 +1,19 @@
+version: 2.1
+
+jobs:
+  test:
+    docker:
+      - image: cimg/go:1.26
+    steps:
+      - checkout
+      - run:
+          name: Run tests
+          command: go test ./...
+      - run:
+          name: Build binary
+          command: go build -o badger .
+
+workflows:
+  ci:
+    jobs:
+      - test
