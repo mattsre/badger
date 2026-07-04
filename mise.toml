@@ -6,3 +6,9 @@ run = "go test ./..."
 
 [tasks.start]
 run = "fnox exec -- go run ."
+
+[tasks.dkbuild]
+run = "docker build --pull -t badger:latest ."
+
+[tasks.dkrun]
+run = "docker run --rm -p 8080:8080 -e CIRCLECI_TOKEN badger:latest"
