@@ -58,8 +58,19 @@ Query parameters:
 |-----------|----------|--------------------------------------|
 | `branch`  | yes      | Branch to query (supports `/`, e.g. `feature/foo`) |
 | `label`   | no       | Left-side badge label (default: `pipeline`) |
+| `value`   | no       | Right-side badge value template; use `$PIPELINE_NUMBER` or `{number}` for the pipeline number (default: pipeline number only) |
 
-Example with a custom label:
+Example with a custom label and formatted value:
+
+```markdown
+![tag](https://badger.example.com/circleci/gh/myorg/myrepo/pipeline?branch=main&label=tag&value=0.1.$PIPELINE_NUMBER)
+```
+
+This renders a badge with `tag` on the left and `0.1.42` on the right when pipeline #42 is the latest on `main`.
+
+`message` is accepted as an alias for `value` (shields.io-style naming).
+
+Example with a custom label only:
 
 ```markdown
 ![build](https://badger.example.com/circleci/gh/myorg/myrepo/pipeline?branch=main&label=build)

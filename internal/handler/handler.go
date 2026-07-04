@@ -1,23 +1,29 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 
-	"github.com/mattc/badger/internal/badge"
-	"github.com/mattc/badger/internal/circleci"
+	"github.com/mattsre/badger/internal/badge"
+	"github.com/mattsre/badger/internal/circleci"
 )
+
+// pipelineFetcher loads the latest CircleCI pipeline for a project branch.
+type pipelineFetcher interface {
+	LatestPipeline(ctx context.Context, projectSlug, branch string) (*circleci.Pipeline, error)
+}
 
 // Handler serves badge endpoints.
 type Handler struct {
-	circleci *circleci.Client
+	circleci pipelineFetcher
 }
 
 // New creates a badge handler.
-func New(circleciClient *circleci.Client) *Handler {
+func New(circleciClient pipelineFetcher) *Handler {
 	return &Handler{circleci: circleciClient}
 }
 
@@ -48,15 +54,21 @@ func (h *Handler) circleciPipeline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	branch := r.URL.Query().Get("branch")
+	q := r.URL.Query()
+	label := q.Get("label")
+	if label == "" {
+		label = "pipeline"
+	}
+
+	branch := q.Get("branch")
 	if branch == "" {
-		writeBadge(w, "pipeline", "missing branch", badge.ColorRed)
+		writeBadge(w, label, "missing branch", badge.ColorRed)
 		return
 	}
 
-	label := r.URL.Query().Get("label")
-	if label == "" {
-		label = "pipeline"
+	valueTemplate := q.Get("value")
+	if valueTemplate == "" {
+		valueTemplate = q.Get("message")
 	}
 
 	projectSlug := fmt.Sprintf("%s/%s/%s", vcs, org, repo)
@@ -67,9 +79,21 @@ func (h *Handler) circleciPipeline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	message := strconv.Itoa(pipeline.Number)
+	message := formatPipelineValue(valueTemplate, pipeline.Number)
 	color := pipelineColor(pipeline.State)
 	writeBadge(w, label, message, color)
+}
+
+// formatPipelineValue renders the badge message from an optional template.
+// Use $PIPELINE_NUMBER or {number} as placeholders for the pipeline number.
+func formatPipelineValue(template string, number int) string {
+	if template == "" {
+		return strconv.Itoa(number)
+	}
+	num := strconv.Itoa(number)
+	s := strings.ReplaceAll(template, "$PIPELINE_NUMBER", num)
+	s = strings.ReplaceAll(s, "{number}", num)
+	return s
 }
 
 func parseCircleCIProjectPath(path string) (vcs, org, repo string, ok bool) {

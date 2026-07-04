@@ -9,8 +9,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/mattc/badger/internal/circleci"
-	"github.com/mattc/badger/internal/handler"
+	"github.com/mattsre/badger/internal/circleci"
+	"github.com/mattsre/badger/internal/handler"
 )
 
 func main() {

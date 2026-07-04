@@ -1,4 +1,4 @@
-module github.com/mattc/badger
+module github.com/mattsre/badger
 
 go 1.26
 
