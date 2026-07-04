@@ -15,12 +15,13 @@ mise install          # install Go 1.26.4 (see mise.toml)
 mise run start        # run the server with secrets from fnox.toml
 ```
 
-Badger listens on `:8080` by default. Override with `BADGER_ADDR` (e.g. `:9090`).
+Badger listens on `:8080` by default. Override with `PORT` (e.g. `9090`).
 
 Without Fnox, export the token manually:
 
 ```bash
 export CIRCLECI_TOKEN=your-personal-api-token   # required for private projects
+export BADGER_ALLOWED_PROJECTS=gh/myorg/myrepo  # comma-separated CircleCI project slugs
 go run .
 ```
 
@@ -96,8 +97,11 @@ If no pipeline exists for the branch, the badge shows `none` in grey. API failur
 
 | Variable          | Default  | Description                              |
 |-------------------|----------|------------------------------------------|
-| `BADGER_ADDR`     | `:8080`  | HTTP listen address                      |
+| `PORT`            | `8080`   | HTTP listen port                         |
 | `CIRCLECI_TOKEN`  | (empty)  | CircleCI personal API token              |
+| `BADGER_ALLOWED_PROJECTS` | (empty) | Comma-separated CircleCI project slugs allowed for badge requests, e.g. `gh/myorg/myrepo` |
+
+`BADGER_ALLOWED_PROJECTS` is required for CircleCI badges. Requests for projects not in the allowlist return `404` and do not call CircleCI. Leave no spaces inside individual slugs; spaces around commas are ignored.
 
 ## Health check
 

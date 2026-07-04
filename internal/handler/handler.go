@@ -19,12 +19,21 @@ type pipelineFetcher interface {
 
 // Handler serves badge endpoints.
 type Handler struct {
-	circleci pipelineFetcher
+	circleci        pipelineFetcher
+	allowedProjects map[string]struct{}
 }
 
 // New creates a badge handler.
-func New(circleciClient pipelineFetcher) *Handler {
-	return &Handler{circleci: circleciClient}
+func New(circleciClient pipelineFetcher, allowedProjects []string) *Handler {
+	projects := make(map[string]struct{}, len(allowedProjects))
+	for _, project := range allowedProjects {
+		projects[project] = struct{}{}
+	}
+
+	return &Handler{
+		circleci:        circleciClient,
+		allowedProjects: projects,
+	}
 }
 
 // ServeHTTP routes badge requests.
@@ -54,6 +63,12 @@ func (h *Handler) circleciPipeline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	projectSlug := fmt.Sprintf("%s/%s/%s", vcs, org, repo)
+	if !h.projectAllowed(projectSlug) {
+		http.NotFound(w, r)
+		return
+	}
+
 	q := r.URL.Query()
 	label := q.Get("label")
 	if label == "" {
@@ -71,7 +86,6 @@ func (h *Handler) circleciPipeline(w http.ResponseWriter, r *http.Request) {
 		valueTemplate = q.Get("message")
 	}
 
-	projectSlug := fmt.Sprintf("%s/%s/%s", vcs, org, repo)
 	pipeline, err := h.circleci.LatestPipeline(r.Context(), projectSlug, branch)
 	if err != nil {
 		message, color := badgeForError(err)
@@ -82,6 +96,11 @@ func (h *Handler) circleciPipeline(w http.ResponseWriter, r *http.Request) {
 	message := formatPipelineValue(valueTemplate, pipeline.Number)
 	color := pipelineColor(pipeline.State)
 	writeBadge(w, label, message, color)
+}
+
+func (h *Handler) projectAllowed(projectSlug string) bool {
+	_, ok := h.allowedProjects[projectSlug]
+	return ok
 }
 
 // formatPipelineValue renders the badge message from an optional template.
