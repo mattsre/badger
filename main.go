@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -14,12 +15,13 @@ import (
 )
 
 func main() {
-	addr := envOrDefault("BADGER_ADDR", "127.0.0.1:8080")
-	token := os.Getenv("CIRCLECI_TOKEN")
+	port := envOrDefault("PORT", "8080")
+	token := envOrDefault("CIRCLECI_TOKEN", "")
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	addr := fmt.Sprintf(":%s", port)
 	srv := &http.Server{
 		Addr:    addr,
 		Handler: handler.New(circleci.NewClient(token)),
