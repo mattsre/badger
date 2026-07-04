@@ -1,0 +1,85 @@
+# badger
+
+Badger is a small self-hosted service for generating GitHub README badges in the [shields.io](https://shields.io/badges) style.
+
+The first supported badge shows the **latest CircleCI pipeline number** for a given branch.
+
+## Quick start
+
+```bash
+export CIRCLECI_TOKEN=your-personal-api-token   # required for private projects
+go run .
+```
+
+Badger listens on `:8080` by default. Override with `BADGER_ADDR` (e.g. `:9090`).
+
+## CircleCI pipeline badge
+
+Embed in your README:
+
+```markdown
+![pipeline](https://badger.example.com/circleci/gh/myorg/myrepo/pipeline?branch=main)
+```
+
+### URL format
+
+```
+/circleci/{vcs}/{org}/{repo}/pipeline?branch={branch}
+```
+
+| Segment  | Example   | Description                          |
+|----------|-----------|--------------------------------------|
+| `vcs`    | `gh`      | VCS slug (`gh` for GitHub, `bb` for Bitbucket) |
+| `org`    | `myorg`   | Organization or user name            |
+| `repo`   | `myrepo`  | Repository name                      |
+
+Query parameters:
+
+| Parameter | Required | Description                          |
+|-----------|----------|--------------------------------------|
+| `branch`  | yes      | Branch to query (supports `/`, e.g. `feature/foo`) |
+| `label`   | no       | Left-side badge label (default: `pipeline`) |
+
+Example with a custom label:
+
+```markdown
+![build](https://badger.example.com/circleci/gh/myorg/myrepo/pipeline?branch=main&label=build)
+```
+
+### Badge colors
+
+The right-side color reflects the pipeline state from CircleCI:
+
+| State                         | Color  |
+|-------------------------------|--------|
+| success, created              | green  |
+| running, pending, setup       | yellow |
+| failed, error                 | red    |
+| canceled                      | grey   |
+| other                         | blue   |
+
+If no pipeline exists for the branch, the badge shows `none` in grey. API failures show `error` in red.
+
+## Configuration
+
+| Variable          | Default  | Description                              |
+|-------------------|----------|------------------------------------------|
+| `BADGER_ADDR`     | `:8080`  | HTTP listen address                      |
+| `CIRCLECI_TOKEN`  | (empty)  | CircleCI personal API token              |
+
+Create a token at [CircleCI Personal API Tokens](https://app.circleci.com/settings/user/tokens).
+
+## Health check
+
+```
+GET /healthz
+```
+
+Returns `200 ok`.
+
+## Development
+
+```bash
+go test ./...
+go build -o badger .
+```
