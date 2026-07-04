@@ -1,5 +1,7 @@
 # badger
 
+![tag](https://badger-six.vercel.app/circleci/gh/mattsre/badger/pipeline?branch=main&label=tag&value=0.1.$PIPELINE_NUMBER)
+
 Badger is a small self-hosted service for generating GitHub README badges in the [shields.io](https://shields.io/badges) style.
 
 The first supported badge shows the **latest CircleCI pipeline number** for a given branch.
