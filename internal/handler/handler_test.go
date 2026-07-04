@@ -24,6 +24,7 @@ func (s *stubPipelineClient) LatestPipeline(context.Context, string, string) (*c
 }
 
 var allowedTestProjects = []string{"gh/myorg/myrepo"}
+var allowedTestBranches = []string{"main"}
 
 func TestFormatPipelineValue(t *testing.T) {
 	tests := []struct {
@@ -47,7 +48,7 @@ func TestFormatPipelineValue(t *testing.T) {
 func TestCircleciPipelineBadge(t *testing.T) {
 	h := New(&stubPipelineClient{
 		pipeline: &circleci.Pipeline{Number: 42, State: "success"},
-	}, allowedTestProjects)
+	}, allowedTestProjects, allowedTestBranches)
 
 	req := httptest.NewRequest(http.MethodGet, "/circleci/gh/myorg/myrepo/pipeline?branch=main&label=tag&value=0.1.$PIPELINE_NUMBER", nil)
 	rec := httptest.NewRecorder()
@@ -68,7 +69,7 @@ func TestCircleciPipelineBadge(t *testing.T) {
 func TestCircleciPipelineBadgeMessageAlias(t *testing.T) {
 	h := New(&stubPipelineClient{
 		pipeline: &circleci.Pipeline{Number: 5, State: "success"},
-	}, allowedTestProjects)
+	}, allowedTestProjects, allowedTestBranches)
 
 	req := httptest.NewRequest(http.MethodGet, "/circleci/gh/myorg/myrepo/pipeline?branch=main&label=tag&message=0.1.$PIPELINE_NUMBER", nil)
 	rec := httptest.NewRecorder()
@@ -81,7 +82,7 @@ func TestCircleciPipelineBadgeMessageAlias(t *testing.T) {
 }
 
 func TestCircleciPipelineMissingBranchUsesLabel(t *testing.T) {
-	h := New(&stubPipelineClient{}, allowedTestProjects)
+	h := New(&stubPipelineClient{}, allowedTestProjects, allowedTestBranches)
 
 	req := httptest.NewRequest(http.MethodGet, "/circleci/gh/myorg/myrepo/pipeline?label=tag", nil)
 	rec := httptest.NewRecorder()
@@ -100,7 +101,7 @@ func TestCircleciPipelineDisallowedProjectDoesNotCallCircleCI(t *testing.T) {
 	client := &stubPipelineClient{
 		pipeline: &circleci.Pipeline{Number: 42, State: "success"},
 	}
-	h := New(client, []string{"gh/other/repo"})
+	h := New(client, []string{"gh/other/repo"}, allowedTestBranches)
 
 	req := httptest.NewRequest(http.MethodGet, "/circleci/gh/myorg/myrepo/pipeline?branch=main", nil)
 	rec := httptest.NewRecorder()
@@ -118,7 +119,7 @@ func TestCircleciPipelineEmptyAllowlistDoesNotCallCircleCI(t *testing.T) {
 	client := &stubPipelineClient{
 		pipeline: &circleci.Pipeline{Number: 42, State: "success"},
 	}
-	h := New(client, nil)
+	h := New(client, nil, allowedTestBranches)
 
 	req := httptest.NewRequest(http.MethodGet, "/circleci/gh/myorg/myrepo/pipeline?branch=main", nil)
 	rec := httptest.NewRecorder()
@@ -129,6 +130,41 @@ func TestCircleciPipelineEmptyAllowlistDoesNotCallCircleCI(t *testing.T) {
 	}
 	if client.calls != 0 {
 		t.Fatalf("LatestPipeline called %d times, want 0", client.calls)
+	}
+}
+
+func TestCircleciPipelineDisallowedBranchDoesNotCallCircleCI(t *testing.T) {
+	client := &stubPipelineClient{
+		pipeline: &circleci.Pipeline{Number: 42, State: "success"},
+	}
+	h := New(client, allowedTestProjects, []string{"main"})
+
+	req := httptest.NewRequest(http.MethodGet, "/circleci/gh/myorg/myrepo/pipeline?branch=feature/foo", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404", rec.Code)
+	}
+	if client.calls != 0 {
+		t.Fatalf("LatestPipeline called %d times, want 0", client.calls)
+	}
+}
+
+func TestCircleciPipelineAllowsConfiguredBranch(t *testing.T) {
+	h := New(&stubPipelineClient{
+		pipeline: &circleci.Pipeline{Number: 7, State: "success"},
+	}, allowedTestProjects, []string{"main", "feature/foo"})
+
+	req := httptest.NewRequest(http.MethodGet, "/circleci/gh/myorg/myrepo/pipeline?branch=feature/foo", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), ">7<") {
+		t.Fatalf("expected configured branch badge value, got: %s", rec.Body.String())
 	}
 }
 

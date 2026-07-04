@@ -22,6 +22,7 @@ Without Fnox, export the token manually:
 ```bash
 export CIRCLECI_TOKEN=your-personal-api-token   # required for private projects
 export BADGER_ALLOWED_PROJECTS=gh/myorg/myrepo  # comma-separated CircleCI project slugs
+export BADGER_ALLOWED_BRANCHES=main             # optional; defaults to main
 go run .
 ```
 
@@ -59,7 +60,7 @@ Query parameters:
 
 | Parameter | Required | Description                          |
 |-----------|----------|--------------------------------------|
-| `branch`  | yes      | Branch to query (supports `/`, e.g. `feature/foo`) |
+| `branch`  | yes      | Branch to query; must be in `BADGER_ALLOWED_BRANCHES` |
 | `label`   | no       | Left-side badge label (default: `pipeline`) |
 | `value`   | no       | Right-side badge value template; use `$PIPELINE_NUMBER` or `{number}` for the pipeline number (default: pipeline number only) |
 
@@ -100,8 +101,11 @@ If no pipeline exists for the branch, the badge shows `none` in grey. API failur
 | `PORT`            | `8080`   | HTTP listen port                         |
 | `CIRCLECI_TOKEN`  | (empty)  | CircleCI personal API token              |
 | `BADGER_ALLOWED_PROJECTS` | (empty) | Comma-separated CircleCI project slugs allowed for badge requests, e.g. `gh/myorg/myrepo` |
+| `BADGER_ALLOWED_BRANCHES` | `main` | Comma-separated branch names allowed for badge requests, e.g. `main,release` |
 
 `BADGER_ALLOWED_PROJECTS` is required for CircleCI badges. Requests for projects not in the allowlist return `404` and do not call CircleCI. Leave no spaces inside individual slugs; spaces around commas are ignored.
+
+Requests for branches not in `BADGER_ALLOWED_BRANCHES` return `404` and do not call CircleCI. If unset, only `main` is allowed.
 
 ## Health check
 

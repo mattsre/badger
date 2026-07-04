@@ -21,18 +21,24 @@ type pipelineFetcher interface {
 type Handler struct {
 	circleci        pipelineFetcher
 	allowedProjects map[string]struct{}
+	allowedBranches map[string]struct{}
 }
 
 // New creates a badge handler.
-func New(circleciClient pipelineFetcher, allowedProjects []string) *Handler {
+func New(circleciClient pipelineFetcher, allowedProjects, allowedBranches []string) *Handler {
 	projects := make(map[string]struct{}, len(allowedProjects))
 	for _, project := range allowedProjects {
 		projects[project] = struct{}{}
+	}
+	branches := make(map[string]struct{}, len(allowedBranches))
+	for _, branch := range allowedBranches {
+		branches[branch] = struct{}{}
 	}
 
 	return &Handler{
 		circleci:        circleciClient,
 		allowedProjects: projects,
+		allowedBranches: branches,
 	}
 }
 
@@ -80,6 +86,10 @@ func (h *Handler) circleciPipeline(w http.ResponseWriter, r *http.Request) {
 		writeBadge(w, label, "missing branch", badge.ColorRed)
 		return
 	}
+	if !h.branchAllowed(branch) {
+		http.NotFound(w, r)
+		return
+	}
 
 	valueTemplate := q.Get("value")
 	if valueTemplate == "" {
@@ -100,6 +110,11 @@ func (h *Handler) circleciPipeline(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) projectAllowed(projectSlug string) bool {
 	_, ok := h.allowedProjects[projectSlug]
+	return ok
+}
+
+func (h *Handler) branchAllowed(branch string) bool {
+	_, ok := h.allowedBranches[branch]
 	return ok
 }
 
